@@ -1,0 +1,11 @@
+# Render (free static site): New → Blueprint, point it at this repo — or create a Static Site by hand with the same two values.
+services:
+  - type: web
+    name: domino-sky
+    runtime: static
+    buildCommand: node scripts/build-static.js
+    staticPublishPath: dist
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff

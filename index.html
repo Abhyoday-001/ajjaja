@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Domino Sky — Airline Disruption Simulator with an AI Dispatcher</title>
+<meta name="description" content="Close any airport and watch the delay cascade through aircraft rotations, passenger connections and crew duty limits. An AI dispatcher recommends recovery actions with a before/after — every number it states is audited against a deterministic simulation.">
+<meta name="theme-color" content="#0d0e10">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://api.anthropic.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta property="og:title" content="Domino Sky — Airline Disruption Simulator">
+<meta property="og:description" content="One closed airport, a chain of late aircraft, stranded passengers — and an AI dispatcher whose numbers are audited against the simulator.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23d9b46a'/%3E%3Cstop offset='1' stop-color='%23a9854a'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M20 4 24.5 17 35 20 24.5 22.5 20 30 15.5 22.5 5 20 15.5 17Z' fill='url(%23g)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="has-tour">
+<a class="skip" href="#mapWrap">Skip to the map</a>
+<a class="skip" style="left:150px" href="#botBody">Skip to the schedule and flight tables</a>
+<noscript><p style="padding:24px;font:16px system-ui">Domino Sky is an interactive simulator and needs JavaScript. It models a day of airline operations: close an airport and the delay spreads along each aircraft's chain of flights, breaking passenger connections and crew duty limits. An AI dispatcher recommends recovery actions with before/after results; every number it states comes from deterministic code.</p></noscript>
+<header class="top" role="banner">
+  <div class="brand">
+    <svg viewBox="0 0 40 40" width="34" height="34" aria-hidden="true">
+      <defs><linearGradient id="sl" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d9b46a"/><stop offset="1" stop-color="#a9854a"/></linearGradient></defs>
+      <path d="M4 27 L20 31 L36 27" fill="none" stroke="url(#sl)" stroke-width="2.4" stroke-linecap="round" opacity=".45"/>
+      <path d="M4 22 L20 26 L36 22" fill="none" stroke="url(#sl)" stroke-width="2.4" stroke-linecap="round" opacity=".75"/>
+      <path d="M20 4 L24.5 17 L35 20 L24.5 22.5 L20 30 L15.5 22.5 L5 20 L15.5 17 Z" fill="url(#sl)"/>
+    </svg>
+    <div><h1>Domino Sky</h1><span>Disruption simulator</span></div>
+  </div>
+  <select id="networkSel" title="Network" aria-label="Network">
+    <option value="dataset">Organiser dataset (16 airports · 70 flights)</option>
+    <option value="india">India domestic (large)</option>
+    <option value="world">Worldwide</option>
+  </select>
+  <select id="scenarioSel" title="Scenario" aria-label="Scenario"></select>
+  <div class="transport" role="group" aria-label="Simulation clock">
+    <button id="btnPlay" class="btn primary" title="Play / pause (space)">▶ Play</button>
+    <button id="btnStepB" class="btn" title="Back 30 min (←)" aria-label="Back 30 minutes">−30m</button>
+    <button id="btnStepF" class="btn" title="Forward 30 min (→)" aria-label="Forward 30 minutes">+30m</button>
+    <div class="clock" aria-live="off"><span id="clock">08:00</span><small id="clockDay">IST</small></div>
+    <input id="scrub" type="range" min="300" max="1800" step="1" value="480" aria-label="Simulation time">
+    <select id="speed" title="Playback speed" aria-label="Playback speed">
+      <option value="6">Slow</option><option value="15" selected>Normal</option><option value="40">Fast</option><option value="100">Turbo</option>
+    </select>
+    <button id="btnRestart" class="btn" title="Back to the start of the day" aria-label="Restart the day">↺</button>
+  </div>
+  <div id="hdrScore" class="hdr-score" aria-label="Score"></div>
+  <button id="btnImport" class="btn icon" title="Import a flight schedule (CSV or JSON)" aria-label="Import flight data">⬆</button>
+  <button class="btn icon" data-act="openHelp" title="How it works (?)" aria-label="How it works">?</button>
+  <button id="btnTheme" class="btn icon" title="Switch light / dark theme" aria-label="Switch light or dark theme">☀</button>
+</header>
+
+<div id="tour" class="tour" role="region" aria-label="Start here">
+  <span class="tt"><b>Start here:</b> close an airport → the aircraft held there run late on every later leg → connections break and crews hit their duty limit → an <b>AI dispatcher</b> recommends a fix, with before/after.</span>
+  <button class="btn primary sm" data-act="runDemo">▶ 60-second guided demo</button>
+  <button class="btn sm" data-act="openImport">⬆ Import your flight data</button>
+  <button class="btn sm" data-act="openHelp">How it works</button>
+  <button class="x-btn" data-act="closeTour" aria-label="Dismiss this bar">✕</button>
+</div>
+
+<div id="demoCap" class="demoCap hidden" role="status" aria-live="polite"></div>
+
+<main class="grid" id="main">
+  <aside class="left panel" aria-label="Controls">
+    <nav class="tabs" id="leftTabs" role="tablist" aria-label="Controls">
+      <button data-tab="scenario" class="on">Scenario</button>
+      <button data-tab="dispatcher">AI Dispatcher</button>
+      <button data-tab="recovery">Recovery</button>
+      <button data-tab="advisor">Advisor</button>
+    </nav>
+    <div class="tabbody" id="leftBody" role="tabpanel"></div>
+  </aside>
+
+  <section class="center" aria-label="Network map and schedules">
+    <div class="mapwrap" id="mapWrap">
+      <canvas id="map" role="img" aria-label="Interactive map of the airline network"></canvas>
+      <div id="banner" class="banner"></div>
+      <div id="detail" class="detail hidden"></div>
+      <div class="maptools">
+        <div class="seg" id="colorMode" role="group" aria-label="Colour aircraft by"><button data-m="live" class="on">Live</button><button data-m="delay">Delay</button><button data-m="gen">Domino generation</button></div>
+        <button class="btn sm" id="btnRecenter">Recenter</button>
+      </div>
+      <div class="legend" id="legend"></div>
+      <div class="plantbar" id="plant" role="group" aria-label="Plant a problem"></div>
+    </div>
+    <div class="bottom panel">
+      <nav class="tabs" id="botTabs" role="tablist" aria-label="Schedules and analysis">
+        <button data-tab="gantt" class="on">Rotation schedule</button>
+        <button data-tab="board">Flight board</button>
+        <button data-tab="fix">Where to fix</button>
+        <button data-tab="cascade">Cascade</button>
+        <button data-tab="pax">Passengers</button>
+        <button data-tab="crews">Crews</button>
+        <span class="grow"></span>
+        <span id="botExtra" class="botextra"></span>
+      </nav>
+      <div class="tabbody" id="botBody" role="tabpanel"></div>
+    </div>
+  </section>
+
+  <aside class="right panel" aria-label="Results">
+    <div class="tabbody scroll" id="rightBody"></div>
+  </aside>
+</main>
+<div id="sitrep" class="sr-only" role="status" aria-live="polite"></div>
+<div id="tip" class="tip hidden" role="tooltip"></div>
+<div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+<dialog id="importDlg" aria-labelledby="impT">
+  <h2 id="impT">Import a flight schedule</h2>
+  <p>Drop a <b>CSV</b>, <b>TSV</b> or <b>JSON</b> file anywhere on this page, choose one, or paste it below. Domino Sky rebuilds each aircraft’s chain of flights, the connecting passengers and the crews, then simulates your day.</p>
+  <ul class="fmt">
+    <li><b>Needed:</b> origin airport, destination airport, scheduled departure time, scheduled arrival time (any column order; names are matched loosely — e.g. <code>origin</code>/<code>dep</code>/<code>from</code>).</li>
+    <li><b>Optional:</b> flight number, tail / registration (otherwise rotations are inferred), airline, seats, passengers, and <code>origin_lat origin_lon dest_lat dest_lon</code> for airports Domino Sky does not know.</li>
+    <li><b>Times:</b> <code>HH:MM</code>, <code>HHMM</code>, <code>YYYY-MM-DD HH:MM</code> or ISO 8601. JSON may be an array of flights or <code>{"flights":[…],"airports":[{"code","lat","lon"}]}</code>.</li>
+  </ul>
+  <div class="row"><input id="importFile" type="file" accept=".csv,.tsv,.txt,.json,text/csv,application/json" aria-label="Choose a schedule file"><button class="btn sm" id="importSample" type="button">Download a sample CSV</button></div>
+  <textarea id="importText" rows="7" spellcheck="false" placeholder="flight,tail,origin,destination,std,sta&#10;AI101,VT-ABC,DEL,BOM,06:30,08:40&#10;AI102,VT-ABC,BOM,DEL,09:30,11:40" aria-label="Paste a schedule"></textarea>
+  <p id="importMsg" class="note" role="alert"></p>
+  <div class="btnrow"><button class="btn primary" id="importGo" type="button">Import &amp; simulate</button><button class="btn" data-close="#importDlg" type="button">Close</button></div>
+</dialog>
+
+<dialog id="helpDlg" aria-labelledby="helpT">
+  <h2 id="helpT">How Domino Sky works</h2>
+  <p><b>The idea.</b> Each aircraft flies a chain of flights through the day. If a plane is held at one airport, every later flight on its chain starts late — even in cities with clear skies. Late arrivals also break passenger connections and push crews past their legal duty hours.</p>
+  <h3>Try it in four moves</h3>
+  <ol>
+    <li><b>Close an airport</b> — Scenario tab → “Close an airport”: pick the airport, when it closes and for how long (or plant a storm anywhere on the map).</li>
+    <li><b>Watch it spread</b> — press Play. The map, the rotation schedule, the flight board and “Where to fix” show which flights are late, <i>why</i> (each delay is traced back along the aircraft’s chain), and how many passengers are stranded. The Crews tab shows duty clocks.</li>
+    <li><b>Ask the AI dispatcher</b> — AI Dispatcher tab → “What should I do?”. It recommends an action (swap in a spare aircraft, cancel a rotation, ground-delay program, …) with a before/after table.</li>
+    <li><b>Apply it</b> — the day re-simulates and the result is stated again with exact before/after numbers.</li>
+  </ol>
+  <h3>Where the numbers come from</h3>
+  <p>All delay, passenger and crew calculations are done by deterministic code (a seeded discrete-event simulation — same inputs, same answer, every time). The dispatcher <b>explains and recommends; it never calculates</b>. Every figure it writes is pulled from the simulator, and a separate audit step then re-reads the finished text and checks each number and clock time against the simulator’s own output; the badge under each message shows the result. With the optional Claude mode, a number the model invents that the simulator did not return is highlighted in red.</p>
+  <h3>Data</h3>
+  <p>The default network is the <b>organisers’ dataset</b> (<code>data/flight_network.json</code>): 16 airports, 70 flights on 16 aircraft, 21 passenger connections with their own minimum connect times, 16 crews with explicit duty windows, 2 spare aircraft and a 30-minute minimum turnaround. With no problem planted, the simulator reproduces its timetable exactly. The India and Worldwide networks are larger <b>synthetic</b> examples on the real map; <b>Import data</b> runs any other schedule (CSV/JSON).</p>
+  <h3>Keyboard</h3>
+  <p><kbd>Space</kbd> play/pause · <kbd>←</kbd> <kbd>→</kbd> ±30 min · <kbd>Esc</kbd> cancel placing / stop demo · <kbd>?</kbd> this help</p>
+  <div class="btnrow"><button class="btn primary" data-act="runDemo" type="button">▶ Watch the 60-second demo</button><button class="btn" data-close="#helpDlg" type="button">Close</button></div>
+</dialog>
+
+<script defer src="js/world-topo.js"></script>
+<script defer src="js/dataset.js"></script>
+<script defer src="js/data.js"></script>
+<script defer src="js/engine.js"></script>
+<script defer src="js/import.js"></script>
+<script defer src="js/validate.js"></script>
+<script defer src="js/dispatcher.js"></script>
+<script defer src="js/map.js"></script>
+<script defer src="js/ui.js"></script>
+<script defer src="js/ui-extra.js"></script>
+<script defer src="js/tracker.js"></script>
+<script defer src="js/view3d.js"></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+# Netlify (free plan): connect the repo, or drag the dist/ folder onto app.netlify.com/drop
+[build]
+  command = "node scripts/build-static.js"
+  publish = "dist"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+[[headers]]
+  for = "/vendor/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"

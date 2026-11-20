@@ -1,0 +1,16 @@
+{
+  "name": "domino-sky",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Domino Sky — airline disruption simulator. A static site: no server, and no build step is needed to deploy.",
+  "scripts": {
+    "start": "node serve.js",
+    "test": "node test/engine.test.js && node test/security.test.js && node test/contrast.test.js",
+    "build:3d": "esbuild src3d/globe3d.js --bundle --minify --format=iife --target=es2019 --legal-comments=none --outfile=vendor/globe3d.js",
+    "build": "node scripts/build-static.js"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "three": "^0.187.0"
+  }
+}

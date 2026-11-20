@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Domino Sky — in-browser tests</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body{font:14px/1.5 system-ui,sans-serif;margin:0;padding:20px;background:#0b1118;color:#e8eef6}
+  h1{margin:0 0 4px;font-size:20px} .sum{font-size:16px;margin:8px 0 16px;font-weight:700}
+  table{border-collapse:collapse;width:100%;max-width:980px} td,th{border-bottom:1px solid #22304a;padding:5px 8px;text-align:left;vertical-align:top}
+  .p{color:#34d399;font-weight:700} .f{color:#f87171;font-weight:700} .g{color:#8fa0b8;font-size:12px;text-transform:uppercase;letter-spacing:.06em;padding-top:14px}
+  iframe{position:absolute;left:-9999px;width:1280px;height:720px;border:0}
+  a{color:#4cc9f0}
+</style>
+</head>
+<body>
+<h1>Domino Sky — in-browser tests</h1>
+<p>Loads the real app in a hidden frame and checks the interface end to end. Serve the project (<code>npm start</code>) and open <code>/test/browser.html</code>. Engine, dispatcher and security logic have their own Node suites (<code>npm test</code>).</p>
+<div class="sum" id="sum">Running…</div>
+<table id="t"><tbody></tbody></table>
+<iframe id="app" src="../index.html?tour=0" title="Domino Sky under test"></iframe>
+<script>
+(async function () {
+  const rows = [], tb = document.querySelector('#t tbody'); let pass = 0, fail = 0, group = '';
+  const g = name => { group = name; tb.insertAdjacentHTML('beforeend', '<tr><td class="g" colspan="3">' + name + '</td></tr>'); };
+  const check = (name, cond, detail) => { cond ? pass++ : fail++; tb.insertAdjacentHTML('beforeend', '<tr><td class="' + (cond ? 'p' : 'f') + '">' + (cond ? '✓' : '✗') + '</td><td>' + name + '</td><td>' + (detail ? String(detail).replace(/</g, '&lt;') : '') + '</td></tr>'); rows.push({ group, name, ok: !!cond }); };
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  const frame = document.getElementById('app');
+  await new Promise(r => frame.addEventListener('load', r, { once: true }));
+  for (let i = 0; i < 50 && !(frame.contentWindow.DominoSky && frame.contentWindow.DominoSky.api && frame.contentWindow.DominoSky.HOOKS.actions.ask); i++) await wait(100);
+  const W = frame.contentWindow, D = W.document, U = W.DominoSky, S = U.S, api = U.api, DS = W.DS, $ = s => D.querySelector(s), $$ = s => [...D.querySelectorAll(s)];
+  const errors = []; W.addEventListener('error', e => errors.push(e.message)); W.addEventListener('unhandledrejection', e => errors.push(String(e.reason)));
+  const viol = []; D.addEventListener('securitypolicyviolation', e => viol.push(e.violatedDirective + ' ' + e.blockedURI));
+
+  g('Problem alignment — the organisers’ dataset and the brief');
+  const n = api.net;
+  check('Default network is the compact dataset', n.meta.id === 'dataset', n.meta.name);
+  check('16 airports', n.airports.length === 16, n.airports.length);
+  check('70 flights', n.flights.length === 70, n.flights.length);
+  check('16 aircraft', n.tails.filter(t => !t.spare).length === 16);
+  check('Spare aircraft available', n.tails.filter(t => t.spare).length >= 2, n.tails.filter(t => t.spare).length + ' spares');
+  check('Connections and crews present', n.itins.length >= 20 && new Set(n.tails.map(t => t.crew)).size >= 16, n.itins.length + ' connections');
+  check('A clear day reproduces the timetable (no delays, no cancellations)', DS.simulate(n, [], []).flights.every(f => f.status === 'ok' && f.adep === f.std && f.aarr === f.sta));
+  check('"Close an airport" control exists', !!$('[data-act=closeAirport]'));
+  check('Crews view exists', !!$('#botTabs [data-tab=crews]'));
+  check('AI Dispatcher tab exists', !!$('#leftTabs [data-tab=dispatcher]'));
+
+  g('Dispatcher end to end — numbers match the engine');
+  S.now = S.weather[0].start + 60; api.renderAll(); await wait(200);
+  $('#leftTabs [data-tab=dispatcher]').click(); await wait(100);
+  $('[data-act=ask][data-q="@recommend"]').click(); await wait(300);
+  let msg = $$('#chatLog .msg.ai').pop();
+  check('Recommendation appears with an audit badge', !!msg && /✓ \d+ numbers checked/.test(msg.querySelector('.audit').textContent), msg && msg.querySelector('.audit').textContent);
+  check('Before/after table is shown', !!msg.querySelector('table.ba'));
+  const before = { pax: Math.round(api.R().pax.paxMin / 60), stranded: api.R().pax.stranded };
+  msg.querySelector('[data-act=chatApply]').click(); await wait(400);
+  const after = { pax: Math.round(api.R().pax.paxMin / 60), stranded: api.R().pax.stranded };
+  const applied = $$('#chatLog .msg.ai').pop(), text = applied.textContent.replace(/,/g, '');
+  check('Applying it improves passenger delay', after.pax < before.pax, before.pax + ' → ' + after.pax + ' pax-hours');
+  check('Dispatcher states the exact engine "before"', text.includes(String(before.pax)), 'before ' + before.pax);
+  check('Dispatcher states the exact engine "after"', text.includes(String(after.pax)), 'after ' + after.pax);
+  check('Applied message is audited too', /✓/.test(applied.querySelector('.audit').textContent));
+  const unv = $$('#chatLog .audit.bad').length; check('No message in the conversation failed its audit', unv === 0, unv + ' failed');
+
+  g('Security');
+  const csp = ($('meta[http-equiv="Content-Security-Policy"]') || {}).content || '';
+  check('Content-Security-Policy is present', csp.length > 0);
+  check('Scripts: no inline, no eval', /script-src 'self'/.test(csp) && !/script-src[^;]*unsafe/.test(csp));
+  check('Network limited to self + the Anthropic API', /connect-src 'self' https:\/\/api\.anthropic\.com/.test(csp));
+  check('Referrer is suppressed', ($('meta[name=referrer]') || {}).content === 'no-referrer');
+  $('#importText').value = 'flight,tail,origin,destination,std,sta\n<img src=x onerror=window.__pwned=1>,VT-A,DEL,BOM,06:00,08:00\n'; $('#importGo').click(); await wait(300);
+  check('A hostile import file is refused with a message', /rejected|Could not|not allowed/i.test($('#importMsg').textContent), $('#importMsg').textContent.slice(0, 90));
+  check('…and nothing from it executed or was injected', !W.__pwned && !D.querySelector('img[src="x"]') && api.net.meta.id === 'dataset');
+  check('The API key field is a password field and empty by default', $('#claudeKey') ? $('#claudeKey').type === 'password' && $('#claudeKey').value === '' : true);
+  check('No CSP violations occurred while testing', viol.length === 0, viol.join(' | '));
+
+  g('Accessibility');
+  const html = D.documentElement, nameOf = el => (el.getAttribute('aria-label') || el.getAttribute('aria-labelledby') || (el.id && D.querySelector('label[for="' + el.id + '"]')) || el.closest('label') || el.textContent.trim() || el.title || '');
+  check('<html lang> is set', !!html.lang, html.lang);
+  check('Exactly one <h1>', $$('h1').length === 1);
+  check('Landmarks: banner, main, complementary, region', !!$('[role=banner]') && !!$('main') && $$('aside[aria-label]').length >= 2);
+  const unnamed = $$('button, select, input:not([type=hidden]), textarea').filter(el => !nameOf(el));
+  check('Every button, select and input has an accessible name', unnamed.length === 0, unnamed.map(e => e.outerHTML.slice(0, 60)).join(' ; '));
+  const unnamedAfterOpen = (api.renderLeft(), await wait(100), $$('input[type=range], select').filter(el => !nameOf(el)));
+  check('Sliders and selects in the side panel are named', unnamedAfterOpen.length === 0, unnamedAfterOpen.length + ' unnamed');
+  check('Tab bars use role=tab with aria-selected', $$('#leftTabs [role=tab]').length === 4 && $$('#leftTabs [aria-selected=true]').length === 1 && $$('#botTabs [role=tab]').length >= 5);
+  check('Roving tabindex: one tab stop per tab bar', $$('#leftTabs [role=tab]').filter(t => t.tabIndex === 0).length === 1 && $$('#botTabs [role=tab]').filter(t => t.tabIndex === 0).length === 1);
+  $('#botTabs [data-tab=board]').click(); await wait(300);
+  const rowsClickable = $$('#boardTbl tr.click'); check('Flight-board rows are keyboard-focusable', rowsClickable.length > 0 && rowsClickable.every(r => r.tabIndex === 0), rowsClickable.length + ' rows');
+  rowsClickable[0].dispatchEvent(new W.KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); await wait(150);
+  check('Enter on a focused row selects the flight', S.sel.flight != null);
+  check('Table headers have scope', $$('th').every(th => th.getAttribute('scope')));
+  check('Dialogs are labelled', $$('dialog').every(d => d.getAttribute('aria-labelledby')));
+  check('Live text report exists (map equivalent for screen readers)', ($('#sitrep').textContent || '').length > 60, ($('#sitrep').textContent || '').slice(0, 80));
+  check('Map canvas has a text alternative', ($('#map').getAttribute('aria-label') || '').length > 60);
+  check('Skip links present', $$('a.skip').length >= 1);
+  const css = [...D.styleSheets].map(s => { try { return [...s.cssRules].map(r => r.cssText).join(' '); } catch (e) { return ''; } }).join(' ');
+  check('prefers-reduced-motion is honoured', /prefers-reduced-motion/.test(css));
+  check('Visible focus style defined', /:focus-visible/.test(css));
+
+  g('Robustness');
+  check('No uncaught errors while running the tests', errors.length === 0, errors.join(' | '));
+  const t0 = W.performance.now(); for (let i = 0; i < 20; i++) DS.simulate(n, S.weather, S.plan); const ms = (W.performance.now() - t0) / 20;
+  check('A full-day re-simulation takes under 50 ms', ms < 50, ms.toFixed(1) + ' ms');
+  const t1 = W.performance.now(); DS.advise(n, S.weather, [], S.now, 'pax'); const adv = W.performance.now() - t1;
+  check('Testing every recovery measure takes under 1 s', adv < 1000, adv.toFixed(0) + ' ms');
+
+  document.getElementById('sum').innerHTML = (fail ? '<span class="f">✗ ' + fail + ' failed</span> · ' : '') + '<span class="p">' + pass + ' passed</span> of ' + (pass + fail);
+  document.title = (fail ? 'FAIL ' : 'PASS ') + pass + '/' + (pass + fail) + ' — Domino Sky tests';
+  window.__results = { pass, fail, rows };
+})();
+</script>
+</body>
+</html>
