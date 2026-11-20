@@ -60,7 +60,7 @@ ok(
   'the globe must follow the Terrain / Minimal switch'
 );
 ok(!/#4cc9f0/.test(bundle) && !/#4cc9f0/.test(src), 'the old cyan glow came back');
-const map = read('js/map.js');
+const map = read('js/map-style.js'); // the terrain palettes
 const terrainImgs = [...map.matchAll(/img:\s*'([^']+)'/g)].map(m => m[1]);
 ok(terrainImgs.length >= 2, 'both themes need a terrain image');
 terrainImgs.forEach(img => {

@@ -388,6 +388,8 @@ console.log('import OK');
 // ---- AI dispatcher: every number it states must match the engine -------------------------------------
 (async () => {
   require('../js/dispatcher.js');
+  require('../js/dispatcher-audit.js');
+  require('../js/dispatcher-claude.js');
   const D = DS.Dispatcher;
   const net = DS.buildNetwork('dataset'),
     sc = DS.SCENARIOS_DATA[0];

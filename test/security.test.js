@@ -8,6 +8,8 @@ require('../js/engine.js');
 require('../js/import.js');
 require('../js/validate.js');
 require('../js/dispatcher.js');
+require('../js/dispatcher-audit.js');
+require('../js/dispatcher-claude.js');
 const root = path.join(__dirname, '..');
 let n = 0;
 const ok = (cond, msg) => {
@@ -120,17 +122,13 @@ n++;
   global.fetch = realFetch;
 
   // 4. static scan: no eval, no document.write, no third-party scripts, no remote hosts except the API
-  const files = [
-    'js/data.js',
-    'js/engine.js',
-    'js/import.js',
-    'js/validate.js',
-    'js/dispatcher.js',
-    'js/map.js',
-    'js/ui.js',
-    'js/ui-extra.js',
-    'index.html'
-  ].map(f => [f, fs.readFileSync(path.join(root, f), 'utf8')]);
+  // every script in js/ (so a new file can never skip the scan) plus the page itself
+  const files = fs
+    .readdirSync(path.join(root, 'js'))
+    .filter(f => f.endsWith('.js'))
+    .map(f => 'js/' + f)
+    .concat('index.html')
+    .map(f => [f, fs.readFileSync(path.join(root, f), 'utf8')]);
   files.forEach(([f, src]) => {
     ok(
       !/\beval\s*\(/.test(src) && !/new Function\s*\(/.test(src) && !/document\.write\s*\(/.test(src),
