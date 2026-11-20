@@ -14,7 +14,7 @@
 
   // ---------------------------------------------------------------- parsing
   function parseCSV(text) {
-    text = text.replace(/^﻿/, '');
+    text = text.replace(/^\uFEFF/, '');
     const first = text.split(/\r?\n/, 1)[0] || '';
     const delim = [',', ';', '\t', '|'].map(d => [d, first.split(d).length]).sort((a, b) => b[1] - a[1])[0][0];
     const rows = []; let row = [], cur = '', q = false;
@@ -35,7 +35,7 @@
     const t = text.trim();
     if (!t) throw new Error('Nothing to import — paste a CSV or JSON schedule, or choose a file.');
     if (t[0] === '[' || t[0] === '{') {
-      let j; try { j = JSON.parse(t); } catch (e) { throw new Error('That looks like JSON but could not be parsed: ' + e.message); }
+      let j; try { j = JSON.parse(t); } catch (e) { throw new Error('That looks like JSON but could not be parsed: ' + e.message, { cause: e }); }
       if (isOrganiser(j)) return { organiser: j };
       if (Array.isArray(j)) return { rows: j, airports: [] };
       const rows = j.flights || j.schedule || j.rows || j.data;
@@ -78,7 +78,7 @@
   function parseWhen(v) {
     v = String(v == null ? '' : v).trim(); let m;
     if ((m = v.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{1,2}):(\d{2})/))) return { d: Date.UTC(+m[1], +m[2] - 1, +m[3]) / 864e5, min: +m[4] * 60 + +m[5] };
-    if ((m = v.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})[ ,T]+(\d{1,2}):(\d{2})/))) return { d: Date.UTC(+m[3], +m[2] - 1, +m[1]) / 864e5, min: +m[4] * 60 + +m[5] };
+    if ((m = v.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})[ ,T]+(\d{1,2}):(\d{2})/))) return { d: Date.UTC(+m[3], +m[2] - 1, +m[1]) / 864e5, min: +m[4] * 60 + +m[5] };
     if ((m = v.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*([AaPp][Mm])?\s*(?:\+(\d))?$/))) {
       let h = +m[1]; if (m[3]) { const pm = /p/i.test(m[3]); if (pm && h < 12) h += 12; if (!pm && h === 12) h = 0; }
       return { d: null, min: h * 60 + +m[2] + (m[4] ? 1440 * +m[4] : 0) };

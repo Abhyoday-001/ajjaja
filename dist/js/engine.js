@@ -18,7 +18,7 @@
 
   function simulate(net, weather, plan) {
     plan = plan || []; weather = weather || [];
-    const A = net.airportMap, F = net.flights, n = F.length;
+    const A = net.airportMap, F = net.flights;
     const HZ = (net.meta && net.meta.t1) || HORIZON;
     const MINT = net.minTurn || MIN_TURN;          // minimum turnaround from the data
     const P = { gdp: [], hold: [], fastturn: [], crew: [], surge: [], cancel: [], swap: [], rebook: null };
@@ -481,7 +481,7 @@
     return Object.keys(m).sort((a, b) => m[b] - m[a]).slice(0, 4);
   }
   function candidates(net, weather, plan, now) {
-    const out = [], hubs = net.airports.filter(a => a.hub).map(a => a.code);
+    const out = [];
     const wxCodes = affected(net, weather);
     const has = (type, key) => plan.some(a => a.type === type && (!key || a.airport === key));
     const cur = simulate(net, weather, plan);

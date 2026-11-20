@@ -6,9 +6,9 @@
   'use strict';
   const DS = G.DS;
   const LIMITS = { fileBytes: 5 * 1024 * 1024, flights: 6000, airports: 300, aircraft: 2500 };
-  const ID = /^[A-Za-z0-9][A-Za-z0-9 ._\-\/~]{0,23}$/;           // flight numbers, tail / crew ids, airline codes
+  const ID = /^[A-Za-z0-9][A-Za-z0-9 ._\-/~]{0,23}$/;           // flight numbers, tail / crew ids, airline codes
   const CODE = /^[A-Za-z0-9]{2,5}$/;                               // airport codes
-  const NAME = /^[\p{L}\p{M}\p{N}\p{Pd} .,'’()&\/]{1,80}$/u;       // city / airport / airline names: any script, any dash, no markup characters
+  const NAME = /^[\p{L}\p{M}\p{N}\p{Pd} .,'’()&/]{1,80}$/u;       // city / airport / airline names: any script, any dash, no markup characters
 
   function validateNetwork(net) {
     const bad = (what, v) => { throw new Error('Import rejected: ' + what + ' “' + String(v).slice(0, 30).replace(/[<>&"]/g, '·') + '” contains characters that are not allowed (letters, digits, space and . _ - / ~ only).'); };

@@ -304,9 +304,9 @@
       const k = f.orig + f.dest; if (seen[k]) continue; seen[k] = 1;
       const arr = gc(S.net.airportMap[f.orig], S.net.airportMap[f.dest]);
       for (const o of offs) {
-        let first = true, minx = 1e9, maxx = -1e9;
+        let first = true;
         const x0 = W / 2 + v.ox + (arr[0] - v.lon0) * v.s + o, x1 = W / 2 + v.ox + (arr[GCN * 2] - v.lon0) * v.s + o;
-        minx = Math.min(x0, x1); maxx = Math.max(x0, x1); if (maxx < -400 || minx > W + 400) continue;
+        const minx = Math.min(x0, x1), maxx = Math.max(x0, x1); if (maxx < -400 || minx > W + 400) continue;
         for (let i = 0; i <= GCN; i++) { const x = W / 2 + v.ox + (arr[i * 2] - v.lon0) * v.s + o, y = H / 2 + v.oy - (mercY(arr[i * 2 + 1]) - v.m0) * v.s; first ? (c.moveTo(x, y), first = false) : c.lineTo(x, y); }
       }
     }

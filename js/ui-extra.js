@@ -4,7 +4,7 @@
   'use strict';
   function boot() {
     const U = window.DominoSky, api = U.api, S = U.S, H = U.HOOKS, DS = window.DS, D = DS.Dispatcher;
-    const { $, $$, esc, hhmm, num, toast, R } = api;
+    const { $, esc, hhmm, num, toast, R } = api;
     const net = () => api.net;
     S.chat = []; S.claude = { key: '', model: 'claude-opus-5-5', consent: false, busy: false };
     H.onReset.push(() => { S.chat = []; });

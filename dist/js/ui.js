@@ -196,8 +196,8 @@
     const has = t => S.plan.some(a => a.type === t);
     const freeSp = net.tails.filter(t => t.spare && !S.plan.some(a => a.type === 'swap' && a.spare === t.id));
     const late = lateFlights(20, now);
-    const swapF = late.find(f => f.id == F.swapFlight) ? +F.swapFlight : (late[0] ? late[0].id : null);
-    const canF = late.find(f => f.id == F.cancelFlight) ? +F.cancelFlight : (late[0] ? late[0].id : null);
+    const swapF = late.find(f => String(f.id) === String(F.swapFlight)) ? +F.swapFlight : (late[0] ? late[0].id : null);
+    const canF = late.find(f => String(f.id) === String(F.cancelFlight)) ? +F.cancelFlight : (late[0] ? late[0].id : null);
     const spareFor = fid => { const f = R().flights[fid]; return freeSp.slice().sort((a, b) => net.dist(a.base, f.orig) - net.dist(b.base, f.orig))[0]; };
     const flOpts = (sel) => late.map(f => `<option value="${f.id}" ${f.id === sel ? 'selected' : ''}>${f.num} ${f.orig}→${f.dest} · ${hhmm(f.std)} · +${Math.round(f.adep - f.std)}m</option>`).join('');
     const gAp = g('gdpAp', wx), hAp = g('holdAp', 'ALL'), hMin = +g('holdMin', 20), fAp = g('ftAp', wx), sAp = g('surgeAp', wx === 'ALL' ? 'DEL' : wx);
@@ -288,7 +288,7 @@
     const m = M(), b = MB(), has = S.plan.length > 0;
     const at = attributionAt(R(), S.now), wx = at.weather + at.airborne, kn = at.reactionary, share = wx + kn > 0 ? kn / (wx + kn) : 0;
     const k = (label, v, base, fmt, lowerBetter) => {
-      let em = '';
+      let em;
       if (base == null) em = '<em>&nbsp;</em>';
       else if (has) { const d = v - base; if (Math.abs(d) >= 0.5 || fmt === 'pct') { const better = lowerBetter ? d < 0 : d > 0; em = `<em class="${better ? 'good' : d === 0 ? '' : 'bad'}">${d > 0 ? '+' : '−'}${fmt === 'pct' ? Math.abs(d * 100).toFixed(1) + ' pts' : num(Math.abs(d))} vs none</em>`; } else em = '<em>= no action</em>'; } else em = '<em>&nbsp;</em>';
       return `<div class="kpi"><small>${label}</small><b>${fmt === 'pct' ? (v * 100).toFixed(1) + '%' : num(v)}</b>${em}</div>`;

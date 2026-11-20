@@ -168,7 +168,7 @@
   }
 
   function recommend(ctx) {
-    const L = new Ledger(), net = ctx.net, ev = evaluateCandidates(ctx, 5), para = [];
+    const L = new Ledger(), ev = evaluateCandidates(ctx, 5), para = [];
     if (!ctx.weather.length) { para.push('There is no disruption to recover from. Close an airport or plant a problem and I will test every recovery measure for you.'); return finish('Recommendation', para, L, ctx); }
     if (!ev.items.length) { para.push('I tested ' + L.n('tested', ev.tested) + ' recovery measures at ' + L.t('now', ctx.now) + ' and none of them improves ' + DS.OBJ[ev.objective].label.toLowerCase() + ' any further. The current plan is already the best available.'); return finish('Recommendation', para, L, ctx, { evidence: ev }); }
     const top = ev.items[0], b = top.before, a = top.after, fb = ctx.res.flights, fa = top.resAfter.flights;
@@ -192,7 +192,7 @@
     return finish('Recommendation', para, L, ctx, { evidence: ev, top, cmp });
   }
   function reasonFor(ctx, top, L) {
-    const net = ctx.net, a = top.action, f = ctx.res.flights[a.flight];
+    const a = top.action, f = ctx.res.flights[a.flight];
     switch (a.type) {
       case 'swap': return '<b>Why it works:</b> ' + esc(f.num) + ' is predicted ' + L.n('flight_delay', Math.max(0, f.adep - f.std)) + ' minutes late leaving ' + f.orig + '. A fresh aircraft and crew from the spare pool take over that flight and the rest of its rotation, so the later flights on that aircraft stop inheriting the delay.';
       case 'cancel': return '<b>Why it works:</b> ' + esc(f.num) + ' would leave ' + L.n('flight_delay', Math.max(0, f.adep - f.std)) + ' minutes late. Cancelling the rotation early frees the aircraft and protects passengers before they reach the airport.';
@@ -266,7 +266,7 @@
       if (ids) { let t = o; ids.forEach(id => { if (id) t = t.split(id).join(' '); }); t.replace(/\b(\d{1,2}):(\d{2})\b/g, m => { times.push(m); return ' '; }).replace(/(^|[^A-Za-z0-9_.])(\d[\d,]*(?:\.\d+)?)/g, (m, p, n) => { out.push(parseFloat(n.replace(/,/g, ''))); return m; }); }
       return { nums: out, times };
     }
-    if (typeof o === 'string') { (o.match(/d[d,]*(?:.d+)?/g) || []).forEach(s => out.push(parseFloat(s.replace(/,/g, '')))); (o.match(/d{1,2}:d{2}/g) || []).forEach(s => times.push(s)); }
+    if (typeof o === 'string') { (o.match(/\d[\d,]*(?:\.\d+)?/g) || []).forEach(s => out.push(parseFloat(s.replace(/,/g, '')))); (o.match(/\b\d{1,2}:\d{2}\b/g) || []).forEach(s => times.push(s)); }
     else if (typeof o === 'number') { if (isFinite(o)) out.push(o); }
     else if (Array.isArray(o)) o.forEach(x => collectNumbers(x, out, times, ids));
     else if (typeof o === 'object') Object.keys(o).forEach(k => {
@@ -282,7 +282,7 @@
   }
   // Independent audit: every number and time in `text` must match the engine's output at the precision shown.
   function verifyText(text, truth, ids) {
-    let t = String(text).replace(/ /g, ''); (ids || []).forEach(id => { if (id) t = t.split(id).join(' '); });
+    let t = String(text).replace(/\u200a/g, ''); (ids || []).forEach(id => { if (id) t = t.split(id).join(' '); });
     const times = [], toks = [];
     t = t.replace(/\b(\d{1,2}):(\d{2})(?:⁺¹)?/g, m => { times.push(m.replace('⁺¹', '')); return ' '; });
     t.replace(/(^|[^A-Za-z0-9_.])(\d[\d,]*(?:\.\d+)?)(%?)/g, (m, pre, num, pct) => { const clean = num.replace(/,/g, ''); toks.push({ raw: num + pct, num: parseFloat(clean), dec: (clean.split('.')[1] || '').length }); return m; });
