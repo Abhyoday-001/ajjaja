@@ -29,7 +29,7 @@
     if (DS.Globe3D) return Promise.resolve();
     if (loading) return loading;
     loading = new Promise((resolve, reject) => {
-      const s = document.createElement('script'); s.src = 'vendor/globe3d.js'; s.onload = resolve;
+      const s = document.createElement('script'); s.src = 'vendor/globe3d.js?v=2'; s.onload = resolve;
       s.onerror = () => { loading = null; reject(new Error('could not load vendor/globe3d.js')); }; document.head.appendChild(s);
     });
     return loading;
