@@ -14,6 +14,17 @@
       '<div class="fr-count" id="frCount" aria-live="off"></div></div>' +
       '<div class="fr-zoom" role="group" aria-label="Zoom"><button type="button" id="frIn" aria-label="Zoom in">+</button><button type="button" id="frOut" aria-label="Zoom out">−</button></div>');
 
+    // ------------------------------------------------------------ one layout grid for every overlay on the map
+    // Each overlay used to be positioned on its own, so on a narrow map they landed on top of each other and hid buttons.
+    // Now they live in grid cells: they cannot overlap, and content wraps when space runs out.
+    const layer = document.createElement('div'); layer.className = 'maplayer';
+    layer.innerHTML = '<div class="ml top"><div class="tl"></div><div class="tr"></div></div><div class="ml mid-l"></div><div class="ml mid-r"></div><div class="ml bl"></div><div class="ml br"></div>';
+    wrap.appendChild(layer);
+    const cell = c => layer.querySelector('.' + c);
+    cell('tl').appendChild(wrap.querySelector('.fr-top')); cell('tr').appendChild(wrap.querySelector('.maptools'));
+    cell('mid-l').appendChild($('#banner')); cell('mid-r').append($('#detail'), wrap.querySelector('.fr-zoom'));
+    cell('bl').appendChild($('#legend')); cell('br').appendChild($('#plant'));
+
     // ------------------------------------------------------------ live counters
     function counts() {
       const R = api.R().flights, now = S.now; let air = 0, late = 0, cx = 0;

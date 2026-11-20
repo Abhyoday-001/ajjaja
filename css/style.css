@@ -347,3 +347,58 @@ h3{letter-spacing:.14em;font-weight:600;font-size:10.5px}
 .card.hero{border-left:3px solid var(--accent)}
 .evcard{border-left-color:var(--violet)}
 .chip .dot{box-shadow:none}
+
+/* ---- map overlays on one grid: nothing can sit on top of anything else ------------------------------------------------- */
+.maplayer{position:absolute;inset:10px;display:grid;grid-template-columns:minmax(150px,1fr) minmax(0,max-content);grid-template-rows:auto minmax(0,1fr) auto;gap:8px 10px;pointer-events:none;z-index:4}
+.maplayer .ml{display:flex;gap:8px;min-width:0;min-height:0;pointer-events:none}
+.maplayer .ml>*{pointer-events:auto}
+.mapwrap{container-type:inline-size}
+.maplayer .top{grid-area:1/1/2/3;flex-direction:column;align-items:stretch;gap:6px}
+.maplayer .tr{margin-left:auto}
+@container (min-width:900px){.maplayer .top{flex-direction:row;justify-content:space-between;align-items:flex-start}}
+.maplayer .tl,.maplayer .tr{display:flex;gap:8px;min-width:0;max-width:100%;flex-wrap:wrap;pointer-events:none}
+.maplayer .tl>*,.maplayer .tr>*{pointer-events:auto}
+.maplayer .tr{justify-content:flex-end}
+.maplayer .mid-l{grid-area:2/1;flex-direction:column;align-items:flex-start;overflow:hidden}
+.maplayer .mid-r{grid-area:2/2;flex-direction:column;align-items:flex-end;justify-content:space-between;overflow:hidden}
+.maplayer .bl{grid-area:3/1;align-items:flex-end}
+.maplayer .br{grid-area:3/2;justify-content:flex-end;align-items:flex-end}
+.maplayer .fr-top{position:static;max-width:none;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.maplayer .maptools{position:static;display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;max-width:100%}
+.maplayer .banner{position:static;max-width:100%}
+.maplayer .detail{position:static;width:310px;max-width:100%;max-height:100%;margin-left:auto;flex:0 1 auto}
+.maplayer .fr-zoom{position:static;flex:none;margin-top:auto}
+.maplayer .legend{position:static;flex-wrap:wrap;max-width:100%}
+.maplayer .plantbar{position:static;max-width:100%;justify-content:flex-end}
+.maplayer .fr-search{width:min(290px,100%)}
+@media (max-width:700px){
+  .maplayer{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto auto}
+  .maplayer .top{grid-area:1/1}.maplayer .tr{margin-left:0;justify-content:flex-start}
+  .maplayer .mid-l{grid-area:2/1}.maplayer .mid-r{grid-area:2/1;align-items:flex-end;justify-content:flex-end;pointer-events:none}
+  .maplayer .bl{grid-area:3/1}.maplayer .br{grid-area:4/1;justify-content:flex-start}
+  .maplayer .detail{position:absolute;left:0;right:0;bottom:0;width:auto;max-height:70%;z-index:5}
+  .maplayer .legend{display:none}
+}
+.maplayer{grid-template-rows:max-content minmax(0,1fr) max-content}
+.maplayer .top,.maplayer .bl,.maplayer .br{min-height:max-content}
+.maplayer .tl>*,.maplayer .tr>*{flex:none;max-width:100%}
+.maplayer .fr-top{margin:0}
+@media (max-width:700px){.maplayer{grid-template-rows:max-content minmax(0,1fr) max-content max-content}}
+.maplayer .detail{flex:1 1 auto;min-height:0;overflow:auto}
+.maplayer .detail .btnrow{position:sticky;bottom:-1px;background:var(--glass);padding:8px 0 2px;margin-top:8px;border-top:1px solid var(--line)}
+.maplayer .fr-zoom{flex-direction:row}
+.maplayer .fr-zoom button+button{border-top:0;border-left:1px solid var(--line2)}
+@media (max-width:700px){
+  .maplayer{grid-template-rows:max-content minmax(0,1fr) max-content max-content max-content}
+  .maplayer .mid-r{grid-area:3/1;flex-direction:column-reverse;align-items:stretch;overflow:visible;pointer-events:none}
+  .maplayer .mid-r>*{pointer-events:auto}
+  .maplayer .fr-zoom{align-self:flex-end;margin:0}
+  .maplayer .detail{position:static;left:auto;right:auto;bottom:auto;width:auto;max-height:38vh;margin:0 0 6px}
+  .maplayer .bl{grid-area:4/1}.maplayer .br{grid-area:5/1}
+}
+@media (max-width:700px){
+  .mapwrap{height:78vh;min-height:520px}
+  .maplayer .detail{max-height:24vh}
+  .maplayer .banner{max-width:calc(100% - 96px)}
+  .maplayer .mid-l{overflow:visible}
+}
