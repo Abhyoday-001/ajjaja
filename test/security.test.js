@@ -5,6 +5,8 @@ const assert = require('assert'),
   path = require('path');
 const DS = require('../js/data.js');
 require('../js/engine.js');
+require('../js/engine-metrics.js');
+require('../js/advisor.js');
 require('../js/import.js');
 require('../js/validate.js');
 require('../js/dispatcher.js');

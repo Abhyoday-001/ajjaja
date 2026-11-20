@@ -1,6 +1,8 @@
 // Run: node test/engine.test.js
 const DS = require('../js/data.js');
 require('../js/engine.js');
+require('../js/engine-metrics.js');
+require('../js/advisor.js');
 require('../js/import.js');
 const assert = require('assert');
 const net = DS.buildNetwork(2024);
