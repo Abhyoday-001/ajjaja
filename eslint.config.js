@@ -69,18 +69,72 @@ const recommended = {
 const rules = Object.assign({}, recommended, {
   'no-unused-vars': ['warn', { args: 'none', caughtErrors: 'none', varsIgnorePattern: '^_' }],
   'no-empty': ['error', { allowEmptyCatch: true }],
-  'eqeqeq': ['warn', 'smart'],
+  eqeqeq: ['warn', 'smart'],
   'no-var': 'warn'
 });
-const browser = { Blob: 'readonly', Event: 'readonly', Image: 'readonly', MutationObserver: 'readonly', ResizeObserver: 'readonly', URL: 'readonly', cancelAnimationFrame: 'readonly', clearTimeout: 'readonly', clearInterval: 'readonly', devicePixelRatio: 'readonly', document: 'readonly', fetch: 'readonly', innerHeight: 'readonly', innerWidth: 'readonly', localStorage: 'readonly', location: 'readonly', navigator: 'readonly', performance: 'readonly', requestAnimationFrame: 'readonly', sessionStorage: 'readonly', setInterval: 'readonly', setTimeout: 'readonly', window: 'readonly', PointerEvent: 'readonly', MouseEvent: 'readonly', KeyboardEvent: 'readonly', WheelEvent: 'readonly', HTMLElement: 'readonly', CustomEvent: 'readonly' };
-const nodeG = { require: 'readonly', module: 'readonly', process: 'readonly', __dirname: 'readonly', console: 'readonly', Buffer: 'readonly', exports: 'readonly' };
+const browser = {
+  Blob: 'readonly',
+  Event: 'readonly',
+  Image: 'readonly',
+  MutationObserver: 'readonly',
+  ResizeObserver: 'readonly',
+  URL: 'readonly',
+  cancelAnimationFrame: 'readonly',
+  clearTimeout: 'readonly',
+  clearInterval: 'readonly',
+  devicePixelRatio: 'readonly',
+  document: 'readonly',
+  fetch: 'readonly',
+  innerHeight: 'readonly',
+  innerWidth: 'readonly',
+  localStorage: 'readonly',
+  location: 'readonly',
+  navigator: 'readonly',
+  performance: 'readonly',
+  requestAnimationFrame: 'readonly',
+  sessionStorage: 'readonly',
+  setInterval: 'readonly',
+  setTimeout: 'readonly',
+  window: 'readonly',
+  PointerEvent: 'readonly',
+  MouseEvent: 'readonly',
+  KeyboardEvent: 'readonly',
+  WheelEvent: 'readonly',
+  HTMLElement: 'readonly',
+  CustomEvent: 'readonly'
+};
+const nodeG = {
+  require: 'readonly',
+  module: 'readonly',
+  process: 'readonly',
+  __dirname: 'readonly',
+  console: 'readonly',
+  Buffer: 'readonly',
+  exports: 'readonly'
+};
 
 module.exports = [
   { ignores: ['dist/**', 'node_modules/**', 'vendor/**', 'js/world-topo.js', 'js/dataset.js', '.claude/**'] },
   // the app: plain scripts loaded by the page (they also load under Node so the tests can run them)
-  { files: ['js/**/*.js'], languageOptions: { ecmaVersion: 2022, sourceType: 'script', globals: Object.assign({ module: 'writable', require: 'readonly', DS: 'readonly' }, browser) }, rules },
+  {
+    files: ['js/**/*.js'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'script',
+      globals: Object.assign({ module: 'writable', require: 'readonly', DS: 'readonly' }, browser)
+    },
+    rules
+  },
   // the 3D source is an ES module bundled by esbuild
-  { files: ['src3d/**/*.js'], languageOptions: { ecmaVersion: 2022, sourceType: 'module', globals: browser }, rules },
+  {
+    files: ['src3d/**/*.js'],
+    languageOptions: { ecmaVersion: 2022, sourceType: 'module', globals: browser },
+    rules
+  },
   // tests, build and dev server run in Node
-  { files: ['test/**/*.js', 'scripts/**/*.js', 'serve.js', 'eslint.config.js'], languageOptions: { ecmaVersion: 2022, sourceType: 'commonjs', globals: nodeG }, rules }
+  {
+    files: ['test/**/*.js', 'scripts/**/*.js', 'serve.js', 'eslint.config.js'],
+    languageOptions: { ecmaVersion: 2022, sourceType: 'commonjs', globals: nodeG },
+    rules
+  }
 ];

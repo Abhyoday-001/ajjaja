@@ -1,0 +1,11 @@
+dist/
+vendor/
+node_modules/
+data/
+assets/
+js/dataset.js
+js/world-topo.js
+package-lock.json
+index.html
+README.md
+test/browser.html

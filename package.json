@@ -8,7 +8,10 @@
     "test": "node test/engine.test.js && node test/security.test.js && node test/contrast.test.js && node test/deploy.test.js",
     "build:3d": "esbuild src3d/globe3d.js --bundle --minify --format=iife --target=es2019 --legal-comments=none --outfile=vendor/globe3d.js",
     "build": "node scripts/build-static.js",
-    "lint": "npx --yes eslint@10 ."
+    "lint": "npx --yes eslint@10 .",
+    "format": "npx --yes prettier@3 --write .",
+    "format:check": "npx --yes prettier@3 --check .",
+    "check": "npm run lint && npm run format:check && npm test"
   },
   "devDependencies": {
     "esbuild": "^0.28.2",
