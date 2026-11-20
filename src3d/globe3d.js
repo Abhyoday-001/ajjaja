@@ -26,7 +26,14 @@ const toLonLat = v => {
 const rgb = (s, a) => { const [r, g, b] = s.split(',').map(Number); return new THREE.Color().setRGB(r / 255, g / 255, b / 255, THREE.SRGBColorSpace); };
 const hex = s => new THREE.Color(s);
 
-// ------------------------------------------------------------------ Earth texture (equirectangular, from the Natural Earth data)
+// ------------------------------------------------------------------ Earth texture (equirectangular: terrain photo when the map style is Terrain, else Natural Earth fills)
+const TERRAIN = {};
+function terrainImage(pal) {
+  if (DS.mapStyle === 'minimal' || !pal.terrain) return null;
+  const u = pal.terrain.img;
+  if (!TERRAIN[u]) { const im = new Image(); im.onload = () => { const g = window.DominoSky && window.DominoSky.globe3d && window.DominoSky.globe3d(); if (g) g.themeKey = ''; }; im.src = u; TERRAIN[u] = im; }
+  return TERRAIN[u].complete && TERRAIN[u].naturalWidth ? TERRAIN[u] : null;
+}
 function buildEarthTexture(pal) {
   const W = 4096, H = 2048, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d');
   const X = lon => (lon + 180) / 360 * W, Y = lat => (90 - lat) / 180 * H;
@@ -35,6 +42,7 @@ function buildEarthTexture(pal) {
   for (let lon = -180; lon <= 180; lon += 15) { c.moveTo(X(lon), 0); c.lineTo(X(lon), H); }
   for (let lat = -75; lat <= 75; lat += 15) { c.moveTo(0, Y(lat)); c.lineTo(W, Y(lat)); }
   c.stroke();
+  const TI = terrainImage(pal); if (TI) { c.drawImage(TI, 0, 0, W, H); c.fillStyle = pal.terrain.veil; c.fillRect(0, 0, W, H); }
   const GEO = DS.GEO; if (GEO && GEO.ready) {
     const den = (Y(-60) - Y(75)) || 1, lg = c.createLinearGradient(0, Y(75), 0, Y(-60));
     pal.land.forEach(([lat, col]) => lg.addColorStop(clamp((Y(lat) - Y(75)) / den, 0, 1), col));
@@ -48,10 +56,10 @@ function buildEarthTexture(pal) {
       if (close) c.closePath();
     };
     c.beginPath(); for (const o of offs) for (const ct of GEO.countries) for (const r of ct.rings) { if (r.bb[2] + o < -181 || r.bb[0] + o > 181) continue; trace(r.pts, o, true); }
-    c.fillStyle = lg; c.fill(); c.lineJoin = 'round'; c.lineCap = 'round';
-    c.beginPath(); for (const o of offs) for (const a of GEO.coast) trace(a, o, false); c.lineWidth = 7; c.strokeStyle = pal.shelf; c.stroke();
-    c.beginPath(); for (const o of offs) for (const a of GEO.border) trace(a, o, false); c.lineWidth = 1.1; c.strokeStyle = pal.border; c.stroke();
-    c.beginPath(); for (const o of offs) for (const a of GEO.coast) trace(a, o, false); c.lineWidth = 1.7; c.strokeStyle = pal.coast; c.stroke();
+    if (!TI) { c.fillStyle = lg; c.fill(); } c.lineJoin = 'round'; c.lineCap = 'round';
+    c.beginPath(); for (const o of offs) for (const a of GEO.coast) trace(a, o, false); if (!TI) { c.lineWidth = 7; c.strokeStyle = pal.shelf; c.stroke(); }
+    c.beginPath(); for (const o of offs) for (const a of GEO.border) trace(a, o, false); c.lineWidth = 1.1; c.strokeStyle = TI ? pal.terrain.border : pal.border; c.stroke();
+    c.beginPath(); for (const o of offs) for (const a of GEO.coast) trace(a, o, false); if (!TI) { c.lineWidth = 1.7; c.strokeStyle = pal.coast; c.stroke(); }
   }
   const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8; tex.generateMipmaps = true; tex.minFilter = THREE.LinearMipmapLinearFilter; return tex;
 }
@@ -72,7 +80,7 @@ const GLOBE_VS = 'varying vec2 vUv; varying vec3 vN; varying vec3 vW; void main(
 const GLOBE_FS = `uniform sampler2D map; uniform vec3 sunDir; uniform vec3 nightColor; uniform float nightAlpha; uniform vec3 camPos; varying vec2 vUv; varying vec3 vN; varying vec3 vW;
 void main(){ vec3 c=texture2D(map,vUv).rgb; float d=dot(normalize(vN),normalize(sunDir)); float k=smoothstep(0.10,-0.24,d);
   c=mix(c,c*0.30+nightColor*0.55,k*nightAlpha);
-  float rim=pow(1.0-max(dot(normalize(vN),normalize(camPos-vW)),0.0),3.0); c+=rim*vec3(0.10,0.22,0.36)*0.55;
+  float rim=pow(1.0-max(dot(normalize(vN),normalize(camPos-vW)),0.0),3.0); c+=rim*vec3(0.26,0.24,0.20)*0.55;
   gl_FragColor=vec4(c,1.0);
   #include <colorspace_fragment>
 }`;
@@ -114,7 +122,7 @@ class Globe3D {
     // globe
     this.globeMat = new THREE.ShaderMaterial({ vertexShader: GLOBE_VS, fragmentShader: GLOBE_FS, uniforms: { map: { value: null }, sunDir: { value: new THREE.Vector3(1, 0, 0) }, nightColor: { value: new THREE.Color('#050b18') }, nightAlpha: { value: 0.6 }, camPos: { value: new THREE.Vector3() } } });
     this.globe = new THREE.Mesh(new THREE.SphereGeometry(1, 128, 96), this.globeMat); scene.add(this.globe);
-    this.atmoMat = new THREE.ShaderMaterial({ vertexShader: ATMO_VS, fragmentShader: ATMO_FS, uniforms: { glow: { value: new THREE.Color('#4cc9f0') }, power: { value: 3.2 } }, side: THREE.BackSide, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+    this.atmoMat = new THREE.ShaderMaterial({ vertexShader: ATMO_VS, fragmentShader: ATMO_FS, uniforms: { glow: { value: new THREE.Color('#c9a96e') }, power: { value: 3.2 } }, side: THREE.BackSide, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
     scene.add(new THREE.Mesh(new THREE.SphereGeometry(1.085, 64, 48), this.atmoMat));
     // stars
     const sp = new Float32Array(1800 * 3); for (let i = 0; i < 1800; i++) { const u = Math.random() * 2 - 1, t = Math.random() * TAU, s = Math.sqrt(1 - u * u), r = 40 + Math.random() * 20; sp[i * 3] = r * s * Math.cos(t); sp[i * 3 + 1] = r * u; sp[i * 3 + 2] = r * s * Math.sin(t); }
@@ -195,13 +203,13 @@ class Globe3D {
 
   // ---- theme / network / weather / selection sync
   syncTheme(S) {
-    const key = DS.themeName + '|' + S.net.meta.id; if (key === this.themeKey) return; this.themeKey = key;
+    const key = DS.themeName + '|' + S.net.meta.id + '|' + DS.mapStyle; if (key === this.themeKey) return; this.themeKey = key;
     const pal = DS.pal, dark = DS.themeName !== 'light';
     if (this.globeMat.uniforms.map.value) this.globeMat.uniforms.map.value.dispose();
     this.globeMat.uniforms.map.value = buildEarthTexture(pal);
     this.globeMat.uniforms.nightColor.value.set(dark ? '#050b18' : '#1d2f55'); this.globeMat.uniforms.nightAlpha.value = dark ? 0.62 : 0.4;
     this.renderer.setClearColor(dark ? 0x02060c : 0xdfeaf3, 1); this.stars.visible = dark;
-    this.atmoMat.uniforms.glow.value.set(dark ? '#4cc9f0' : '#6fb4e8'); this.atmoMat.blending = dark ? THREE.AdditiveBlending : THREE.NormalBlending; this.atmoMat.needsUpdate = true;
+    this.atmoMat.uniforms.glow.value.set(dark ? '#c9a96e' : '#b9a77e'); this.atmoMat.blending = dark ? THREE.AdditiveBlending : THREE.NormalBlending; this.atmoMat.needsUpdate = true;
     this.trailMat.uniforms.tint.value.set(dark ? 0xffffff : 0xffffff);
     this.buildRoutes(S);
   }

@@ -335,8 +335,21 @@
     const S = this.gs(), net = S.net, ctx = this.ctx, W = this.W, H = this.H, now = S.now, res = S.res.plan, v = this.v, pal = DS.pal;
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0); this.hit = [];
     const key = [net.meta.id, DS.themeName, W | 0, H | 0, v.s.toFixed(3), Math.round(v.ox), Math.round(v.oy), v.lon0, this.dpr].join('|');
-    if (key !== this.skey) { this.skey = key; this.renderStatic(S); }
-    ctx.drawImage(this.sc, 0, 0, W, H);
+    // Smooth pan / zoom: the first frame of a gesture re-renders the base map exactly; while the gesture continues the cached
+    // bitmap is just moved and scaled (a few hundredths of a ms), and one exact render follows once the view has been still for 140 ms.
+    const tnow = performance.now(), rv = this.rv, fixed = net.meta.id + DS.themeName + DS.mapStyle + (W | 0) + 'x' + (H | 0) + this.dpr;
+    if (key !== this.skey) {
+      const prevT = this.viewT || 0; if (key !== this.lastKey) { this.lastKey = key; this.viewT = tnow; }
+      const moving = rv && rv.fixed === fixed && rv.lon0 === v.lon0 && rv.m0 === v.m0 && tnow - prevT < 140 && GEO.ready;
+      if (moving) {
+        const k = v.s / rv.s, C = [W / 2, H / 2];
+        ctx.fillStyle = pal.ocean0; ctx.fillRect(0, 0, W, H);
+        ctx.drawImage(this.sc, C[0] + v.ox + (0 - C[0] - rv.ox) * k, C[1] + v.oy + (0 - C[1] - rv.oy) * k, W * k, H * k);
+      } else {
+        this.skey = key; this.renderStatic(S); this.rv = { fixed, lon0: v.lon0, m0: v.m0, s: v.s, ox: v.ox, oy: v.oy };
+        ctx.drawImage(this.sc, 0, 0, W, H);
+      }
+    } else ctx.drawImage(this.sc, 0, 0, W, H);
 
     // night side of the planet
     this.nightImage(now - net.meta.tz);

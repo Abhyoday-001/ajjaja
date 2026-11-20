@@ -1,9 +1,9 @@
 // Assembles the deployable site into dist/. No dependencies — only Node's standard library.
-// Everything the browser needs is plain files; nothing here compiles or bundles (the 3D bundle in vendor/ is committed).
+// Everything the browser needs is plain files; nothing here compiles or bundles.
 // Usage: node scripts/build-static.js
 const fs = require('fs'), path = require('path');
 const root = path.resolve(__dirname, '..'), out = path.join(root, 'dist');
-const include = ['index.html', 'css', 'js', 'vendor', 'data', 'assets'];          // anything not listed (tests, src3d, serve.js, node_modules, .claude) stays out
+const include = ['index.html', 'css', 'js', 'vendor', 'data', 'assets'];          // anything not listed (tests, serve.js, node_modules, .claude) stays out
 
 fs.rmSync(out, { recursive: true, force: true });
 fs.mkdirSync(out, { recursive: true });

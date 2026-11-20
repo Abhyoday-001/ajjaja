@@ -255,7 +255,7 @@
       <div id="kpiBox" class="kpis"></div>
       <h3>Delay build-up through the day</h3>
       <div class="sw" id="chartSw"><button data-m="pax" class="on">Passenger-hours</button><button data-m="delay">Aircraft-min</button><button data-m="cancelled">Cancellations</button></div>
-      <canvas class="chart" id="chart"></canvas>
+      <canvas class="chart" id="chart" role="img" aria-label="Chart of delay building up through the day, with and without the chosen measures. The same figures are in the scorecard and tables."></canvas>
       <h3>Standings</h3>
       <div class="sw" id="standSw"><button data-s="airports" class="on">Airports</button><button data-s="carriers">Carriers</button></div>
       <div class="row" style="margin-bottom:6px" id="standSortRow"><span class="tag">Sort</span><div class="chips" id="standSort"><button data-o="worst" class="on">Most affected</button><button data-o="best">Best first</button></div></div>
@@ -347,7 +347,7 @@
     const el = $('#botBody'); lastHtml = new WeakMap(); ganttHits = [];
     if (S.btab === 'gantt') {
       el.style.padding = '0';
-      el.innerHTML = `<div class="ganttwrap" id="ganttWrap"><canvas id="ganttHead" style="position:sticky;top:0;z-index:2"></canvas><canvas id="ganttCv"></canvas></div>`;
+      el.innerHTML = `<div class="ganttwrap" id="ganttWrap"><canvas id="ganttHead" role="presentation" aria-hidden="true" style="position:sticky;top:0;z-index:2"></canvas><canvas id="ganttCv" role="img" aria-label="Rotation schedule: one row per aircraft showing each flight as a bar, coloured by delay. The Flight board tab lists the same flights as a table."></canvas></div>`;
       $('#botExtra').innerHTML = `<div class="chips" id="gMode"><button data-g="full" class="${S.gantt.mode === 'full' ? 'on' : ''}">Full day</button><button data-g="focus" class="${S.gantt.mode === 'focus' ? 'on' : ''}">Follow clock</button></div>
         <div class="chips" id="gSort"><button data-s="base" class="${S.gantt.sort === 'base' ? 'on' : ''}">By base</button><button data-s="worst" class="${S.gantt.sort === 'worst' ? 'on' : ''}">Most delayed</button></div>`;
       bindGantt();
@@ -813,7 +813,16 @@
     if (S.now >= T1) { S.now = T1; S.playing = false; header(); renderLeft(); renderLive(); return; }
     acc += dt; if (acc > 220) { acc = 0; renderLive(); }
   }
-  function frame(ts) { advance(); map.draw(ts); requestAnimationFrame(frame); }
+  // Draw at most ~60 times a second (high-refresh screens ask for 120-165), and only ~20 times a second while the clock is paused
+  // and nobody is touching the map: it is still animated (storm pulse, hold rings) but costs a third of the CPU/battery.
+  let lastDraw = 0, lastTouch = 0;
+  ['pointermove', 'pointerdown', 'wheel', 'keydown', 'touchstart'].forEach(ev => document.addEventListener(ev, () => { lastTouch = performance.now(); }, { passive: true }));
+  function frame(ts) {
+    advance();
+    const idle = !S.playing && ts - lastTouch > 2000;
+    if (ts - lastDraw >= (idle ? 48 : 14)) { lastDraw = ts; map.draw(ts); }
+    requestAnimationFrame(frame);
+  }
   requestAnimationFrame(frame);
   setInterval(advance, 200);
   // ---------- situation report: the same story as the map, as plain text ----------
