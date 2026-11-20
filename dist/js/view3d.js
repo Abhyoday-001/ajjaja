@@ -34,6 +34,24 @@
     });
     return loading;
   }
+  // Keyboard control for the globe (mouse drag / wheel still work): arrows rotate, + / - zoom, Home re-centres. The canvas is focusable.
+  const GLOBE_LABEL = cv.getAttribute('aria-label');
+  function bindKeys() {
+    cv.tabIndex = 0; cv.setAttribute('aria-label', GLOBE_LABEL + ' Keyboard: arrow keys rotate, plus and minus zoom, Home re-centres.');
+    cv.addEventListener('keydown', e => {
+      if (!globe || e.ctrlKey || e.metaKey || e.altKey) return;
+      const p = globe.camera.position, d = p.length(), Vec = p.constructor, step = Math.max(0.03, Math.min(0.3, (0.12 + (d - 1.12) * 0.28) * 0.5));   // radians: finer when zoomed in
+      let used = true;
+      if (e.key === 'ArrowLeft') p.applyAxisAngle(new Vec(0, 1, 0), -step);
+      else if (e.key === 'ArrowRight') p.applyAxisAngle(new Vec(0, 1, 0), step);
+      else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') p.applyAxisAngle(new Vec(0, 1, 0).cross(p).normalize(), e.key === 'ArrowUp' ? -step : step);
+      else if (e.key === '+' || e.key === '=') p.setLength(Math.max(1.12, d * 0.8));
+      else if (e.key === '-' || e.key === '_') p.setLength(Math.min(6, d / 0.8));
+      else if (e.key === 'Home') globe.recenter();
+      else used = false;
+      if (used) { e.preventDefault(); e.stopPropagation(); }
+    });
+  }
   function disable(msg) { broken = true; btn3.disabled = true; btn3.title = msg; btn3.classList.remove('on'); say(msg); }
   async function set(next) {
     if (next === mode) return;
@@ -46,7 +64,7 @@
         if (!globe) {
           const h = map.hooks;
           globe = new DS.Globe3D(cv, () => D.S, { placing: () => h.placing(), place: (a, b) => h.place(a, b), hover: (x, px, py) => h.hover(x, px, py), select: x => h.select(x) });
-          globe.recenter(true);
+          globe.recenter(true); bindKeys();
         }
       } catch (e) { btn3.textContent = '3D'; btn3.disabled = false; return disable('3D could not start (' + (e.message || e) + '). Staying on the 2D map.'); }
       btn3.textContent = '3D'; btn3.disabled = false; globe.resize(); globe.setVisible(true);

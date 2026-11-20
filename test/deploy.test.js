@@ -41,6 +41,11 @@ terrainImgs.forEach(img => {
 // the loader asks for a versioned URL, so a new bundle is never hidden behind an old cached one
 ok(/vendor\/globe3d\.js\?v=\d+/.test(read('js/view3d.js')), 'view3d.js must load vendor/globe3d.js with a ?v=N version');
 
+// the globe can be driven without a mouse: focusable canvas, arrow keys rotate, +/- zoom, Home re-centres, visible focus ring
+const v3 = read('js/view3d.js');
+ok(/cv\.tabIndex\s*=\s*0/.test(v3) && /ArrowLeft/.test(v3) && /ArrowUp/.test(v3) && /'Home'/.test(v3) && /key === '\+'/.test(v3), 'view3d.js lost its keyboard controls for the globe');
+ok(/#globe:focus-visible/.test(read('css/view3d.css')), 'the focused globe needs a visible focus ring');
+
 // 4. hosting config: the bundle is revalidated, the site is published from dist/, security headers are on
 const netlify = read('netlify.toml'), vercel = JSON.parse(read('vercel.json'));
 ok(/publish\s*=\s*"dist"/.test(netlify) && vercel.outputDirectory === 'dist', 'both hosts must publish dist/');

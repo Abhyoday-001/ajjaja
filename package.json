@@ -8,13 +8,10 @@
     "test": "node test/engine.test.js && node test/security.test.js && node test/contrast.test.js && node test/deploy.test.js",
     "build:3d": "esbuild src3d/globe3d.js --bundle --minify --format=iife --target=es2019 --legal-comments=none --outfile=vendor/globe3d.js",
     "build": "node scripts/build-static.js",
-    "lint": "eslint ."
+    "lint": "npx --yes eslint@10 ."
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
     "esbuild": "^0.28.2",
-    "eslint": "^10.15.0",
-    "globals": "^17.14.0",
     "three": "^0.187.0"
   }
 }
