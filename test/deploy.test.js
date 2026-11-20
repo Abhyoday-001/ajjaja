@@ -108,7 +108,7 @@ ok(
 );
 
 // 5. no dead buttons: every data-act the app can render has a handler
-const uiFiles = fs.readdirSync(path.join(root, 'js')).filter(f => /^(ui|tracker)(-[a-z]+)?\.js$/.test(f));
+const uiFiles = fs.readdirSync(path.join(root, 'js')).filter(f => /^(ui|tracker)(-[a-z0-9]+)?\.js$/.test(f));
 const code = uiFiles.map(f => read('js/' + f)).join('\n');
 const acts = new Set([...(html + '\n' + code).matchAll(/data-act="([A-Za-z0-9_]+)"/g)].map(m => m[1]));
 ok(acts.size >= 25, "expected to find the app's actions, found " + acts.size);

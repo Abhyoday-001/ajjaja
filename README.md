@@ -45,7 +45,7 @@ Verify it yourself: `node test/engine.test.js` runs 48 dispatcher narrations acr
 
 | Parameter | What was done | How to verify |
 |---|---|---|
-| **Code quality** | Zero runtime dependencies. One responsibility per file: `data.js` (network generators), `engine.js` (pure, deterministic simulation), `import.js` + `validate.js` (bring-your-own data, with safety checks), `dispatcher.js` (DOM-free narrator + auditor + Claude client), `map.js` (renderer), `ui.js` + `ui-extra.js` (controllers, joined by a small hook API). Comments explain *why*; a dead-code scan is clean. | `npm test`; read `js/` — the engine and dispatcher have no DOM access. |
+| **Code quality** | Zero runtime dependencies. One responsibility per file, no file mixes simulation, audit and drawing (see **Project structure**). ESLint clean, Prettier-formatted, EditorConfig, `npm run check` runs lint + format + tests. Comments explain *why*; a dead-code scan is clean. | `npm run check`; read `js/` — the engine and dispatcher have no DOM access. |
 | **Security** | Strict Content-Security-Policy (no inline or `eval` scripts; network only to itself and `api.anthropic.com`), referrer suppressed. Imported identifiers and names are validated and hostile files rejected (e.g. `<img onerror=…>` as a flight number); size caps. The optional API key lives in tab memory only, behind an explicit consent box, and travels *only* to `api.anthropic.com` through a first-party `fetch` — deliberately **not** a CDN-loaded SDK, so no third-party code ever sees it. The dev server refuses dotfiles. | `node test/security.test.js` (38 checks) and the *Security* group in `test/browser.html`. |
 | **Efficiency** | Measured on the organisers’ file: page ready in ~150 ms (everything loaded in ~320 ms, 13 requests, ~270 KB of app code + 739 KB of map data, scripts deferred); a full-day re-simulation takes **0.3 ms**; testing *every* recovery measure and ranking them takes **~5 ms**; an 860-flight worldwide day simulates in ~4 ms. The static map layer is cached and redrawn only when the view changes; the clock advances by real time, so playback is correct at any frame rate. | The *Robustness* group in `test/browser.html` asserts these budgets. |
 | **Testing** | Four Node suites run by `npm test` — engine invariants (no teleporting aircraft, no early departures, deterministic), organiser-dataset conformance (a clear day reproduces the timetable exactly), importer, dispatcher (48 narrations / ~540 numbers audited, tampering and invented figures flagged, Claude tool loop against a scripted model), security (38 checks) and contrast. A deploy-and-wiring suite (127 checks): every file the page loads exists, `dist/` matches the source, the 3D globe keeps its terrain and keyboard controls, `vendor/` is revalidated, every button action has a handler, and the only outside host is the Claude API. Plus a 44-check end-to-end UI page and ESLint (`npm run lint`, run on demand through `npx`, nothing added to the dependencies). | `npm test`; `npm run lint`; open `/test/browser.html` (serve with `npm start`). |
@@ -105,6 +105,21 @@ Press **3D** (top-right of the map, or the `G` key; `?view=3d` in the URL opens 
 - **Loaded on demand.** The 3D engine (`vendor/globe3d.js`, ~630 KB, three.js bundled) downloads only when you first press 3D.
 - **Safe fallback.** If WebGL is unavailable (some headless or locked-down browsers), the 3D button disables itself with an explanation and the 2D map keeps working.
 - **Source:** `src3d/globe3d.js`. Rebuild the bundle with `npm install` then `npm run build:3d`. The built file is committed, so deploying never needs this step.
+
+## Project structure
+
+Plain scripts, loaded in this order by `index.html` (no bundler; it also works opened straight from disk).
+
+| Layer | Files | Responsibility |
+|---|---|---|
+| Data | `dataset.js`, `data.js`, `import.js`, `validate.js`, `world-topo.js` | The organisers' network, synthetic networks, bring-your-own import with safety checks, map outlines |
+| Engine (DOM-free) | `engine.js`, `engine-metrics.js`, `advisor.js` | Deterministic simulation; costs, metrics and standings; recovery options and diagnosis |
+| AI dispatcher (DOM-free) | `dispatcher.js`, `dispatcher-audit.js`, `dispatcher-claude.js` | Narrator that only quotes the engine; the auditor that re-checks every number; the optional Claude client |
+| Map | `map-geo.js`, `map-style.js`, `map.js` | Projection, outlines and great circles; palettes, terrain and themes; the canvas renderer |
+| UI | `ui-core.js`, `ui-left.js`, `ui-right.js`, `ui-bottom.js`, `ui-detail.js`, `ui-events.js`, `ui.js` | State and helpers, the three panels, the map card, input handling, boot and the public API |
+| UI features | `ui-dispatcher.js`, `ui-crews.js`, `ui-airport.js`, `ui-demo.js`, `ui-a11y.js`, `tracker.js`, `view3d.js` | Plug in through `window.DominoSky.HOOKS`: chat, crews tab, close-an-airport, guided demo, accessibility, tracker chrome, 3D globe |
+
+The UI files share one small registry (`DS.ui`) instead of one giant closure. Anything that must run in Node (engine, dispatcher, import) never touches the DOM, which is what lets the test suites load it directly.
 
 ## Deploy for free (static site — no server, no environment variables)
 
